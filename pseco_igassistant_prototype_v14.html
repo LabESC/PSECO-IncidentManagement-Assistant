@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSECO-IGAssistant — Open Input</title>
+    <style>
+        /* ── Design tokens ──────────────────────────────────────────────── */
+        :root {
+            /* Severity system — maps to standard SRE alert levels */
+            --sev-critical:      #ef4444;
+            --sev-critical-bg:   #fee2e2;
+            --sev-critical-text: #991b1b;
+            --sev-high:          #f97316;
+            --sev-high-bg:       #ffedd5;
+            --sev-high-text:     #9a3412;
+            --sev-medium:        #eab308;
+            --sev-medium-bg:     #fef9c3;
+            --sev-medium-text:   #713f12;
+            --sev-low:           #22c55e;
+            --sev-low-bg:        #dcfce7;
+            --sev-low-text:      #166534;
+            --sev-none:          #94a3b8;
+            --sev-none-bg:       #f1f5f9;
+            --sev-none-text:     #475569;
+
+            /* Brand */
+            --primary:           #2563eb;
+            --primary-hover:     #1d4ed8;
+            --primary-bg:        #eff6ff;
+            --success:           #16a34a;
+            --success-hover:     #15803d;
+
+            /* Surfaces */
+            --bg:                #f8fafc;
+            --surface:           #ffffff;
+            --surface-2:         #f1f5f9;
+            --surface-3:         #e9eef5;
+            --border:            #e2e8f0;
+            --border-strong:     #cbd5e1;
+
+            /* Text */
+            --text:              #0f172a;
+            --text-2:            #334155;
+            --text-3:            #64748b;
+            --text-4:            #94a3b8;
+
+            /* Typography */
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+
+            --r-sm: 5px;
+            --r:    9px;
+            --r-lg: 13px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow:    0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        /* ── Reset ──────────────────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.55;
+            font-size: 15px;
+            padding-bottom: 60px;
+        }
+        button { font-family: inherit; cursor: pointer; }
+
+        /* ── Layout ─────────────────────────────────────────────────────── */
+        .container { max-width: 880px; margin: 0 auto; padding: 24px 20px; }
+
+        .wordmark {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .wordmark h1 {
+            font-size: 1.55rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .wordmark h1 .logo-badge {
+            background: var(--primary);
+            color: white;
+            font-size: 0.7rem;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        .wordmark p {
+            font-size: 0.875rem;
+            color: var(--text-3);
+        }
+
+        /* ── Stepper ────────────────────────────────────────────────────── */
+        .stepper {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 32px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: var(--text-4);
+        }
+        .step.active { color: var(--primary); font-weight: 600; }
+        .step-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .step.active .step-dot {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* ── Screens ────────────────────────────────────────────────────── */
+        .screen { display: none; }
+        .screen.active { display: block; }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* ── Forms ──────────────────────────────────────────────────────── */
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+        .form-hint {
+            font-size: 0.8rem;
+            color: var(--text-3);
+            margin-bottom: 6px;
+        }
+        textarea, input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            font-family: inherit;
+            font-size: 0.95rem;
+            color: var(--text);
+            background: var(--surface);
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        textarea:focus, input[type="text"]:focus, input[type="file"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-bg);
+        }
+
+        /* ── Audio Input ────────────────────────────────────────────────── */
+        .audio-input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .audio-btn {
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            border-radius: var(--r);
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-2);
+            cursor: pointer;
+            transition: all 160ms ease-out;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .audio-btn:hover { background: var(--surface-3); }
+        .audio-btn.recording {
+            background: var(--sev-critical-bg);
+            color: var(--sev-critical-text);
+            border-color: var(--sev-critical);
+        }
+        .audio-btn.has-recording {
+            background: var(--sev-low-bg);
+            color: var(--sev-low-text);
+            border-color: var(--sev-low);
+        }
+        .audio-playback {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: var(--surface-2);
+            border-radius: var(--r);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .audio-playback audio {
+            flex: 1;
+            height: 28px;
+        }
+
+        /* ── Buttons ────────────────────────────────────────────────────── */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--r);
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 160ms ease-out;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn {
+            background: var(--primary);
+            color: white;
+        }
+        .btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn:active { transform: scale(0.97); }
+        .btn-outline {
+            background: transparent;
+            color: var(--text-2);
+            border: 1px solid var(--border);
+        }
+        .btn-outline:hover { background: var(--surface-2); }
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        .btn-success:hover { background: var(--success-hover); }
+
+        .btn-nav {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .btn-nav .btn { flex: 1; justify-content: center; }
+
+        /* ── Terminal ────────────────────────────────────────────────────── */
+        .terminal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .terminal-overlay.active { display: flex; }
+        .terminal-window {
+            background: #1a1a1a;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            font-family: var(--font-mono);
+        }
+        .terminal-titlebar {
+            background: #2a2a2a;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        .terminal-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .terminal-btn.red { background: #ef4444; }
+        .terminal-btn.yellow { background: #eab308; }
+        .terminal-btn.green { background: #22c55e; }
+        .terminal-body {
+            padding: 16px;
+            color: #00ff00;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .terminal-line {
+            margin-bottom: 4px;
+            opacity: 0;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .terminal-check { color: #22c55e; margin-right: 4px; }
+        .terminal-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 14px;
+            background: #00ff00;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
+        /* ── CTX Display ────────────────────────────────────────────────── */
+        .ctx-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            margin: 16px 0;
+        }
+        .ctx-table th {
+            background: var(--surface-2);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text);
+            border-bottom: 2px solid var(--border);
+        }
+        .ctx-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-2);
+        }
+        .ctx-table tr:hover { background: var(--surface-2); }
+        .ctx-id { font-family: var(--font-mono); font-weight: 600; color: var(--primary); }
+
+        /* ── Recommendation Box ────────────────────────────────────────── */
+        .rec-box {
+            background: var(--primary-bg);
+            border: 1px solid var(--primary);
+            border-radius: var(--r);
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .rec-box h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .rec-box p {
+            font-size: 0.9rem;
+            color: var(--text-2);
+            margin-bottom: 4px;
+        }
+
+        /* ── Validation Checklist ──────────────────────────────────────── */
+        .validation-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: var(--surface-2);
+            border-radius: var(--r);
+            margin-bottom: 8px;
+            align-items: flex-start;
+        }
+        .validation-item input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            cursor: pointer;
+        }
+        .validation-item label {
+            flex: 1;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text-2);
+        }
+
+        /* ── Alert Box ──────────────────────────────────────────────────── */
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--r);
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+        }
+        .alert-info {
+            background: var(--primary-bg);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+        .alert-warning {
+            background: var(--sev-medium-bg);
+            border: 1px solid var(--sev-medium);
+            color: var(--sev-medium-text);
+        }
+
+        /* ── SRE Practice Card ──────────────────────────────────────────── */
+        .sre-practice-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .sre-practice-card h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+        .implementation-step {
+            background: var(--surface);
+            border-left: 3px solid var(--primary);
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: var(--r-sm);
+        }
+        .implementation-step h5 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+        .implementation-step p {
+            font-size: 0.85rem;
+            color: var(--text-2);
+            margin-bottom: 8px;
+        }
+        .acceptance-criterion {
+            background: var(--sev-low-bg);
+            border-left: 3px solid var(--sev-low);
+            padding: 8px 12px;
+            border-radius: var(--r-sm);
+            font-size: 0.85rem;
+            color: var(--sev-low-text);
+        }
+
+        /* ── Responsive ────────────────────────────────────────────────── */
+        @media (max-width: 600px) {
+            .container { padding: 16px 12px; }
+            .card { padding: 20px 16px; }
+            .wordmark h1 { font-size: 1.3rem; }
+            .stepper { gap: 4px; }
+            .step { font-size: 0.7rem; }
+            .step-dot { width: 20px; height: 20px; }
+        }
+
+        /* ── Print ────────────────────────────────────────────────── */
+        @media print {
+            .stepper, .btn-nav, .terminal-overlay, .audio-input-group { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="wordmark">
+            <h1>PSECO-IGAssistant <span class="logo-badge">v14</span></h1>
+            <p>Open-Input Context Capture for Incident Management</p>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════
+             STEPPER
+        ════════════════════════════════════════════════════════════════ -->
+        <div class="stepper">
+            <div class="step active" id="step-1">
+                <div class="step-dot">1</div>
+                <span>Scenario</span>
+            </div>
+            <div class="step" id="step-2">
+                <div class="step-dot">2</div>
+                <span>Context</span>
+            </div>
+            <div class="step" id="step-3">
+                <div class="step-dot">3</div>
+                <span>Analysis</span>
+            </div>
+            <div class="step" id="step-4">
+                <div class="step-dot">4</div>
+                <span>Validation</span>
+            </div>
+            <div class="step" id="step-5">
+                <div class="step-dot">5</div>
+                <span>Playbook</span>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════
+             SCREEN 1 — OPEN INPUT QUESTIONS (3 QUESTIONS)
+        ════════════════════════════════════════════════════════════════ -->
+        <div id="screen-1" class="screen active">
+            <div class="card">
+                <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:4px;">Describe the incident management in your organizational context</h2>
+                <p style="font-size:0.82rem;color:var(--text-3);margin-bottom:22px;">Answer the following open-ended questions. You may provide text, record audio, or upload documents. At least one response is required to proceed.</p>
+
+                <!-- Q1 -->
+                <div class="form-group">
+                    <label class="form-label" for="q1">Question 1. Technical Dimension: Incident, Service, and Operational Impact</label>
+                    <div class="form-hint">Describe the technical situation involved in the incident. Please mention, if relevant, the affected service, component, software asset, environment, or dependency; what failure, degradation, or abnormal behavior was observed; whether recent changes, releases, integrations, or maintenance activities are involved; and what technical impact is most relevant, such as availability, performance, security, data integrity, reliability, scalability, metrics, or operational stability.</div>
+                    <div class="audio-input-group">
+                        <button class="audio-btn" id="record-q1" onclick="toggleRecording('q1')">🎤 Record</button>
+                        <button class="audio-btn" id="clear-q1" onclick="clearAudio('q1')" style="display:none;">✕ Clear</button>
+                    </div>
+                    <textarea id="q1" placeholder="Type your response here or record audio…"></textarea>
+                    <div id="playback-q1"></div>
+                </div>
+
+                <!-- Q2 -->
+                <div class="form-group">
+                    <label class="form-label" for="q2">Question 2. Business Dimension: Governance, Ecosystem Actors, and Responsibilities</label>
+                    <div class="form-hint">Describe the business and governance conditions that may affect the response. Please mention, if relevant, which ecosystem actors need to be involved, whether the response depends on a central organization, supplier, partner, or customer, and whether there are access restrictions, approvals, contracts, licenses, compliance requirements, unclear responsibilities, ownership issues, or possible business ripple effects.</div>
+                    <div class="audio-input-group">
+                        <button class="audio-btn" id="record-q2" onclick="toggleRecording('q2')">🎤 Record</button>
+                        <button class="audio-btn" id="clear-q2" onclick="clearAudio('q2')" style="display:none;">✕ Clear</button>
+                    </div>
+                    <textarea id="q2" placeholder="Type your response here or record audio…"></textarea>
+                    <div id="playback-q2"></div>
+                </div>
+
+                <!-- Q3 -->
+                <div class="form-group">
+                    <label class="form-label" for="q3">Question 3. Social Dimension: Team, Leadership, and Response Conditions</label>
+                    <div class="form-hint">Describe how people, teams, and leadership are handling the response.
+Please mention, if relevant, whether communication and collaboration are working well, whether people feel safe to raise concerns, escalate issues, or ask for help, whether leadership provides clear direction, support, and autonomy, and whether the team is overloaded, under pressure, or working in an unsustainable way.</div>
+                    <div class="audio-input-group">
+                        <button class="audio-btn" id="record-q3" onclick="toggleRecording('q3')">🎤 Record</button>
+                        <button class="audio-btn" id="clear-q3" onclick="clearAudio('q3')" style="display:none;">✕ Clear</button>
+                    </div>
+                    <textarea id="q3" placeholder="Type your response here or record audio…"></textarea>
+                    <div id="playback-q3"></div>
+                </div>
+
+                <!-- Documents -->
+                <div class="form-group">
+                    <label class="form-label" for="docs">Optional: Upload Supporting Documents</label>
+                    <div class="form-hint">You may upload documents such as incident reports, escalation records, architecture diagrams, dependency maps, service dashboards, postmortems, change records, release notes, runbooks, communication logs, support tickets, SLA documents, vendor agreements, or team coordination records.</div>
+                    <input type="file" id="docs" multiple accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg">
+                    <div id="uploaded-files" style="margin-top:12px;"></div>
+                </div>
+
+                <div class="btn-nav">
+                    <button class="btn btn-outline" onclick="resetForm()">Reset</button>
+                    <button class="btn" style="flex:1" onclick="analyzeInput()">Analyze Scenario</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════
+             SCREEN 2 — ANALYSIS RESULTS (CTX IDENTIFICATION)
+        ════════════════════════════════════════════════════════════════ -->
+        <div id="screen-2" class="screen">
+            <div class="card">
+                <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:4px;">Contextual Characteristics Identified</h2>
+                <p style="font-size:0.82rem;color:var(--text-3);margin-bottom:22px;">The assistant identified the following contextual characteristics in your scenario.</p>
+
+                <div id="ctx-results"></div>
+
+                <div class="btn-nav">
+                    <button class="btn btn-outline" onclick="goToScreen(1)">Back</button>
+                    <button class="btn" style="flex:1" onclick="proceedToRecommendation()">Proceed to Recommendation</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════
+             SCREEN 3 — CLARIFICATION (if needed)
+        ════════════════════════════════════════════════════════════════ -->
+        <div id="screen-3" class="screen">
+            <div class="card">
+                <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:4px;">Clarification Question</h2>
+                <p style="font-size:0.82rem;color:var(--text-3);margin-bottom:22px;">To refine the recommendation, please answer the following question:</p>
+
+                <div class="form-group">
+                    <label class="form-label" for="clarification">What would most immediately improve the incident response in this situation?</label>
+                    <div class="form-hint">Please explain whether the priority is to formalize responsibilities and response paths, improve visibility and monitoring, automate manual work, coordinate actors, organize knowledge, learn from the incident, manage a change-related issue, or capture feedback from affected users or stakeholders.</div>
+                    <textarea id="clarification" placeholder="Type your response here…"></textarea>
+                </div>
+
+                <div class="btn-nav">
+                    <button class="btn btn-outline" onclick="goToScreen(2)">Back</button>
+                    <button class="btn" style="flex:1" onclick="processClarification()">Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════
+             SCREEN 4 — VALIDATION OF STRATEGY
+        ════════════════════════════════════════════════════════════════ -->
+        <div id="screen-4" class="screen">
+            <div class="card">
+                <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:4px;">Validate Recommended Strategy</h2>
+                <p style="font-size:0.82rem;color:var(--text-3);margin-bottom:22px;">Based on the contextual characteristics identified in your scenario, the assistant recommends the following strategy:</p>
+
+                <div id="recommendation-box"></div>
+
+                <div style="margin-top:24px;padding:16px;background:var(--surface-2);border-radius:var(--r);margin-bottom:20px;">
+                    <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:12px;">Do you agree with this strategy?</h3>
+                    <div class="validation-item">
+                        <input type="radio" id="agree-yes" name="strategy-agreement" value="yes" onchange="handleStrategyAgreement()">
+                        <label for="agree-yes"><strong>Yes</strong> — This strategy is appropriate for my scenario.</label>
+                    </div>
+                    <div class="validation-item">
+                        <input type="radio" id="agree-no" name="strategy-agreement" value="no" onchange="handleStrategyAgreement()">
+                        <label for="agree-no"><strong>No</strong> — I would like to provide additional information to reconsider.</label>
+                    </div>
+                </div>
+
+                <div id="additional-feedback" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label" for="feedback">Please provide additional context or clarification:</label>
+                        <div class="form-hint">Explain what aspects of the recommended strategy do not align with your scenario, or provide any missing information that could help refine the recommendation.</div>
+                        <textarea id="feedback" placeholder="Type your feedback here…"></textarea>
+                    </div>
+                </div>
+
+                <div class="btn-nav">
+                    <button class="btn btn-outline" onclick="goToScreen(2)">Back</button>
+                    <button class="btn" style="flex:1" id="proceed-btn" onclick="proceedToPlaybook()" disabled>Proceed to Playbook</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════
+             SCREEN 5 — PLAYBOOK
+        ════════════════════════════════════════════════════════════════ -->
+        <div id="screen-5" class="screen">
+            <div class="card">
+                <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:4px;" id="pb-title">Incident Management Playbook</h2>
+                <p style="font-size:0.82rem;color:var(--text-3);margin-bottom:22px;">Contextualized playbook based on your scenario and the selected strategy.</p>
+
+                <div id="playbook-content"></div>
+
+                <div class="btn-nav">
+                    <button class="btn btn-outline" onclick="goToScreen(1)">Start Over</button>
+                    <button class="btn" onclick="window.print()">Print Playbook</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         TERMINAL OVERLAY
+    ════════════════════════════════════════════════════════════════ -->
+    <div id="terminal-overlay" class="terminal-overlay">
+        <div class="terminal-window">
+            <div class="terminal-titlebar">
+                <span class="terminal-btn red"></span>
+                <span class="terminal-btn yellow"></span>
+                <span class="terminal-btn green"></span>
+            </div>
+            <div class="terminal-body" id="terminal-body"></div>
+        </div>
+    </div>
+
+    <script>
+    /* ── Data ───────────────────────────────────────────────────────────── */
+    const CTX_DEFINITIONS = {
+        CTX01: { name: "Insufficient traceability of the affected software asset", strategy: "T5" },
+        CTX02: { name: "Dependency among ecosystem actors affects the incident response", strategy: "T4" },
+        CTX03: { name: "Handoffs or collaboration arrangements make the response slow, fragmented, or inconsistent", strategy: "T3" },
+        CTX04: { name: "Dependence on the central organization for approval, access, or response authority", strategy: "T1" },
+        CTX05: { name: "Technological variability or compatibility restrictions increase operational risk", strategy: "T7" },
+        CTX06: { name: "Insufficient metrics to assess impact and response effectiveness", strategy: "T2" },
+        CTX07: { name: "Low visibility into systemic effects before acting", strategy: "T2" },
+        CTX08: { name: "Incident associated with maintenance, evolution, or component obsolescence", strategy: "T7" },
+        CTX09: { name: "Resolution is hindered by a shared knowledge gap", strategy: "T5" },
+        CTX10: { name: "New component, actor, or change must comply with entry, quality, or compliance rules", strategy: "T7" },
+        CTX11: { name: "Feedback, perception, or visibility from affected users/stakeholders is not being captured", strategy: "T8" },
+        CTX12: { name: "Low psychological safety to discuss causes, failures, and learning after the incident", strategy: "T6" },
+        CTX13: { name: "Communication and collaboration among the involved actors are not working well", strategy: "T4" },
+        CTX14: { name: "Leadership does not provide sufficient direction, support, or autonomy for the response", strategy: "T1" },
+        CTX15: { name: "Response occurs under overload, excessive pressure, or low work sustainability", strategy: "T3" }
+    };
+
+    const STRATEGIES = {
+        T1: {
+            name: "Establish incident response plans",
+            guideline: "G1 — Formalize Incident Response Procedures",
+            srePractice: {
+                name: "Define clear incident severity levels and response procedures",
+                steps: [
+                    {
+                        title: "Document current incident response process and identify gaps",
+                        description: "Review your organization's existing incident response procedures and identify areas where clarity, formalization, or automation is needed.",
+                        criterion: "Current incident response process is documented and gaps are clearly identified"
+                    },
+                    {
+                        title: "Define roles, responsibilities, and decision authorities",
+                        description: "Establish clear roles for incident commander, technical leads, communication leads, and decision makers. Document who has authority to make critical decisions.",
+                        criterion: "Roles and responsibilities are clearly defined and understood by all team members"
+                    },
+                    {
+                        title: "Create incident severity classification and response procedures",
+                        description: "Define severity levels (critical, high, medium, low) and corresponding response procedures, timelines, and escalation paths for each level.",
+                        criterion: "Incident severity classification is documented and response procedures are defined for each level"
+                    }
+                ]
+            }
+        },
+        T2: {
+            name: "Adopt real-time incident monitoring",
+            guideline: "G2 — Implement Real-Time Monitoring and Alerting",
+            srePractice: {
+                name: "Establish comprehensive metrics collection and dashboards",
+                steps: [
+                    {
+                        title: "Identify key metrics and SLIs for critical services",
+                        description: "Define Service Level Indicators (SLIs) for your critical services based on user-facing metrics like latency, error rate, and availability.",
+                        criterion: "Key SLIs are identified and documented for all critical services"
+                    },
+                    {
+                        title: "Implement monitoring infrastructure and dashboards",
+                        description: "Deploy monitoring agents, collectors, and time-series databases. Create dashboards that display real-time metrics for incident response teams.",
+                        criterion: "Monitoring infrastructure is in place and dashboards are accessible to incident response teams"
+                    },
+                    {
+                        title: "Define alert thresholds and notification rules",
+                        description: "Set meaningful alert thresholds based on SLOs and define routing rules to notify the appropriate teams based on severity and service.",
+                        criterion: "Alert thresholds are defined and notification rules are tested and working"
+                    }
+                ]
+            }
+        },
+        T3: {
+            name: "Automate incident management processes",
+            guideline: "G3 — Automate Incident Response Workflows",
+            srePractice: {
+                name: "Implement automated incident detection and notification",
+                steps: [
+                    {
+                        title: "Identify manual incident management tasks suitable for automation",
+                        description: "Analyze your incident management process and identify repetitive, time-consuming tasks that could be automated, such as alert aggregation, ticket creation, or team notification.",
+                        criterion: "Manual tasks suitable for automation are identified and prioritized"
+                    },
+                    {
+                        title: "Develop self-healing workflows for common failure scenarios",
+                        description: "Create automated remediation workflows for common failure scenarios (e.g., automatic service restart, cache clearing, traffic rerouting) that can resolve incidents without human intervention.",
+                        criterion: "Self-healing workflows are implemented for at least 3 common failure scenarios"
+                    },
+                    {
+                        title: "Create automated status update and escalation workflows",
+                        description: "Implement automation to track incident progress, update stakeholders, and escalate incidents based on duration or impact thresholds.",
+                        criterion: "Automated status updates and escalation workflows are operational"
+                    }
+                ]
+            }
+        },
+        T4: {
+            name: "Coordinate cross-functional collaboration",
+            guideline: "G4 — Establish Autonomous Cross-functional Teams for Incident Management",
+            srePractice: {
+                name: "Define cross-functional incident response teams",
+                steps: [
+                    {
+                        title: "Identify stakeholders and teams involved in incident response",
+                        description: "Map all teams and stakeholders that need to be involved in incident response, including infrastructure, application, database, security, and customer support teams.",
+                        criterion: "All stakeholders and teams involved in incident response are identified and documented"
+                    },
+                    {
+                        title: "Establish single incident coordination channel",
+                        description: "Create a dedicated communication channel (e.g., Slack channel, war room) for incident coordination where all teams can collaborate in real-time during incidents.",
+                        criterion: "Incident coordination channel is established and team members are trained on its use"
+                    },
+                    {
+                        title: "Define decision-making authority and escalation paths",
+                        description: "Clearly define who has authority to make critical decisions during incidents and establish escalation paths when decisions require higher-level approval.",
+                        criterion: "Decision-making authority is clear and escalation paths are documented and tested"
+                    }
+                ]
+            }
+        },
+        T5: {
+            name: "Maintain incident knowledge base",
+            guideline: "G5 — Build and Maintain Incident Knowledge Repository",
+            srePractice: {
+                name: "Establish incident documentation standards and templates",
+                steps: [
+                    {
+                        title: "Define incident documentation standards and templates",
+                        description: "Create standardized templates for incident documentation including incident summary, timeline, root cause analysis, and lessons learned.",
+                        criterion: "Incident documentation standards and templates are defined and available to all teams"
+                    },
+                    {
+                        title: "Implement searchable incident knowledge repository",
+                        description: "Set up a searchable knowledge base or wiki where incident documentation is stored and can be easily accessed by incident response teams.",
+                        criterion: "Knowledge repository is searchable and contains at least 10 documented incidents"
+                    },
+                    {
+                        title: "Implement regular knowledge base maintenance and updates",
+                        description: "Establish a process for regularly reviewing and updating the knowledge base to ensure information remains accurate and relevant.",
+                        criterion: "Knowledge base is reviewed and updated at least quarterly"
+                    }
+                ]
+            }
+        },
+        T6: {
+            name: "Perform post-incident reviews",
+            guideline: "G6 — Conduct Blameless Post-Incident Reviews",
+            srePractice: {
+                name: "Establish blameless post-incident review culture",
+                steps: [
+                    {
+                        title: "Define post-incident review schedule and participants",
+                        description: "Establish a schedule for conducting post-incident reviews (e.g., within 48 hours for major incidents) and define who should participate in the review.",
+                        criterion: "Post-incident review schedule is established and communicated to all teams"
+                    },
+                    {
+                        title: "Create blameless incident analysis process",
+                        description: "Develop a structured process for analyzing incidents that focuses on systemic issues and learning rather than individual blame.",
+                        criterion: "Blameless analysis process is documented and team members are trained on its principles"
+                    },
+                    {
+                        title: "Implement action item tracking and follow-up procedures",
+                        description: "Create a system for tracking action items from postmortems and ensuring they are completed within agreed timelines.",
+                        criterion: "Action item tracking system is in place and at least 80% of action items are completed"
+                    }
+                ]
+            }
+        },
+        T7: {
+            name: "Manage incidents caused by changes",
+            guideline: "G7 — Integrate Change Management with Incident Response",
+            srePractice: {
+                name: "Establish change-to-incident correlation and tracking",
+                steps: [
+                    {
+                        title: "Define change impact analysis and risk assessment process",
+                        description: "Create a process for analyzing the potential impact of changes and assessing the risk of change-related incidents.",
+                        criterion: "Change impact analysis process is documented and applied to all production changes"
+                    },
+                    {
+                        title: "Implement change-to-incident correlation and tracking",
+                        description: "Set up automated or manual processes to correlate incidents with recent changes and track change-related incidents separately.",
+                        criterion: "Change-to-incident correlation is working and change-related incidents are tracked"
+                    },
+                    {
+                        title: "Create automated change validation and rollback procedures",
+                        description: "Implement automated validation of changes and rollback procedures that can quickly revert problematic changes.",
+                        criterion: "Automated rollback procedures are in place and tested for critical services"
+                    }
+                ]
+            }
+        },
+        T8: {
+            name: "Collect end-user feedback",
+            guideline: "G8 — Capture and Integrate End-User Feedback",
+            srePractice: {
+                name: "Establish user feedback collection mechanisms",
+                steps: [
+                    {
+                        title: "Define user feedback collection channels and mechanisms",
+                        description: "Establish multiple channels for collecting user feedback during and after incidents, such as feedback forms, surveys, support tickets, and social media monitoring.",
+                        criterion: "User feedback collection channels are established and actively monitored"
+                    },
+                    {
+                        title: "Create user impact assessment and communication templates",
+                        description: "Develop templates for assessing user impact and communicating incident status and resolution to affected users.",
+                        criterion: "User impact assessment and communication templates are documented and available"
+                    },
+                    {
+                        title: "Implement feedback-driven incident response improvements",
+                        description: "Use user feedback to identify gaps in incident response and make improvements to processes, communication, and service reliability.",
+                        criterion: "User feedback is reviewed regularly and used to drive at least 2 process improvements per quarter"
+                    }
+                ]
+            }
+        }
+    };
+
+    let identifiedCTX = [];
+    let selectedStrategy = null;
+    let needsClarification = false;
+    let userResponses = {};
+    let mediaRecorders = {};
+    let recordingStates = {};
+
+    /* ── Screen navigation ────────────────────────────────────────────── */
+    function goToScreen(n) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(`screen-${n}`).classList.add('active');
+        
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById(`step-${n}`).classList.add('active');
+        
+        window.scrollTo(0, 0);
+    }
+
+    function updateStep(n) {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById(`step-${n}`).classList.add('active');
+    }
+
+    /* ── Terminal animation ────────────────────────────────────────────── */
+    function runTerminal(messages, callback) {
+        const overlay = document.getElementById('terminal-overlay');
+        const body = document.getElementById('terminal-body');
+        overlay.classList.add('active');
+        body.innerHTML = '';
+
+        messages.forEach((msg, idx) => {
+            setTimeout(() => {
+                const line = document.createElement('div');
+                line.className = 'terminal-line';
+                line.innerHTML = `<span class="terminal-check">✓</span> ${msg}`;
+                body.appendChild(line);
+                body.scrollTop = body.scrollHeight;
+            }, idx * 600);
+        });
+
+        setTimeout(() => {
+            const cursor = document.createElement('div');
+            cursor.className = 'terminal-line';
+            cursor.innerHTML = '<span class="terminal-cursor"></span>';
+            body.appendChild(cursor);
+        }, messages.length * 600);
+
+        setTimeout(() => {
+            overlay.classList.remove('active');
+            if (callback) callback();
+        }, messages.length * 600 + 1000);
+    }
+
+    /* ── Audio Recording ────────────────────────────────────────────── */
+    async function toggleRecording(questionId) {
+        const btn = document.getElementById(`record-${questionId}`);
+        
+        if (!recordingStates[questionId]) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const mediaRecorder = new MediaRecorder(stream);
+                mediaRecorders[questionId] = mediaRecorder;
+                recordingStates[questionId] = true;
+                
+                let audioChunks = [];
+                mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    displayAudioPlayback(questionId, audioUrl);
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+                btn.classList.add('recording');
+                btn.textContent = '⏹ Stop Recording';
+            } catch (err) {
+                alert('Microphone access denied. Please check your browser permissions.');
+            }
+        } else {
+            recordingStates[questionId] = false;
+            mediaRecorders[questionId].stop();
+            btn.classList.remove('recording');
+            btn.classList.add('has-recording');
+            btn.textContent = '🎤 Re-record';
+            document.getElementById(`clear-${questionId}`).style.display = 'inline-flex';
+        }
+    }
+
+    function displayAudioPlayback(questionId, audioUrl) {
+        const container = document.getElementById(`playback-${questionId}`);
+        container.innerHTML = `
+            <div class="audio-playback">
+                <audio controls src="${audioUrl}" style="flex:1;"></audio>
+            </div>
+        `;
+    }
+
+    function clearAudio(questionId) {
+        recordingStates[questionId] = false;
+        mediaRecorders[questionId] = null;
+        document.getElementById(`playback-${questionId}`).innerHTML = '';
+        document.getElementById(`record-${questionId}`).classList.remove('has-recording');
+        document.getElementById(`record-${questionId}`).textContent = '🎤 Record';
+        document.getElementById(`clear-${questionId}`).style.display = 'none';
+    }
+
+    /* ── File upload ────────────────────────────────────────────────── */
+    function handleFileUpload(event) {
+        const files = Array.from(event.target.files);
+        const container = document.getElementById('uploaded-files');
+        container.innerHTML = '';
+        files.forEach((file, idx) => {
+            container.insertAdjacentHTML('beforeend', `
+                <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;font-size:0.85rem;">
+                    <span style="color:var(--text-2);font-weight:500;">📄 ${file.name}</span>
+                </div>
+            `);
+        });
+    }
+
+    document.getElementById('docs').addEventListener('change', handleFileUpload);
+
+    /* ── Simulated CTX identification ────────────────────────────────── */
+    function analyzeInput() {
+        const q1 = document.getElementById('q1').value.trim();
+        const q2 = document.getElementById('q2').value.trim();
+        const q3 = document.getElementById('q3').value.trim();
+
+        // Check if at least one question is answered
+        if (!q1 && !q2 && !q3) {
+            alert('Please answer at least one question before proceeding.');
+            return;
+        }
+
+        userResponses = { q1, q2, q3 };
+
+        runTerminal([
+            'parsing scenario context...',
+            'identifying contextual characteristics...',
+            'mapping to incident management strategies...',
+            'preparing recommendation...'
+        ], () => {
+            identifiedCTX = [];
+            
+            if (q2.toLowerCase().includes('external') || q2.toLowerCase().includes('provider') || q2.toLowerCase().includes('partner')) {
+                identifiedCTX.push({ id: 'CTX02', evidence: 'Response involves external providers or partners' });
+            }
+            if (q2.toLowerCase().includes('approval') || q2.toLowerCase().includes('access') || q2.toLowerCase().includes('central')) {
+                identifiedCTX.push({ id: 'CTX04', evidence: 'Central organization approval or access required' });
+            }
+            if (q3.toLowerCase().includes('communication') || q3.toLowerCase().includes('fragmented') || q3.toLowerCase().includes('unclear')) {
+                identifiedCTX.push({ id: 'CTX13', evidence: 'Communication and collaboration challenges' });
+            }
+            if (q2.toLowerCase().includes('version') || q2.toLowerCase().includes('compatibility') || q2.toLowerCase().includes('technology')) {
+                identifiedCTX.push({ id: 'CTX05', evidence: 'Technological variability or compatibility constraints' });
+            }
+            if (q2.toLowerCase().includes('metrics') || q2.toLowerCase().includes('visibility') || q2.toLowerCase().includes('dashboard')) {
+                identifiedCTX.push({ id: 'CTX06', evidence: 'Insufficient metrics or visibility' });
+            }
+            if (q3.toLowerCase().includes('pressure') || q3.toLowerCase().includes('overload') || q3.toLowerCase().includes('reactive')) {
+                identifiedCTX.push({ id: 'CTX15', evidence: 'Team under pressure or overload' });
+            }
+            if (q3.toLowerCase().includes('safe') || q3.toLowerCase().includes('blame') || q3.toLowerCase().includes('reluctant')) {
+                identifiedCTX.push({ id: 'CTX12', evidence: 'Low psychological safety concerns' });
+            }
+
+            if (identifiedCTX.length === 0) {
+                identifiedCTX = [
+                    { id: 'CTX02', evidence: 'Multi-team involvement indicated' },
+                    { id: 'CTX13', evidence: 'Coordination challenges present' }
+                ];
+            }
+
+            displayCTXResults();
+            updateStep(2);
+            goToScreen(2);
+        });
+    }
+
+    function displayCTXResults() {
+        const container = document.getElementById('ctx-results');
+        let html = '<table class="ctx-table"><thead><tr><th>CTX ID</th><th>Contextual Characteristic</th><th>Evidence</th></tr></thead><tbody>';
+        
+        identifiedCTX.forEach(ctx => {
+            const def = CTX_DEFINITIONS[ctx.id];
+            html += `
+                <tr>
+                    <td><span class="ctx-id">${ctx.id}</span></td>
+                    <td>${def.name}</td>
+                    <td style="font-size:0.85rem;color:var(--text-3);">${ctx.evidence}</td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    function proceedToRecommendation() {
+        const strategyCount = {};
+        identifiedCTX.forEach(ctx => {
+            const strategy = CTX_DEFINITIONS[ctx.id].strategy;
+            strategyCount[strategy] = (strategyCount[strategy] || 0) + 1;
+        });
+
+        const maxFreq = Math.max(...Object.values(strategyCount));
+        const topStrategies = Object.entries(strategyCount).filter(([_, freq]) => freq === maxFreq).map(([strat, _]) => strat);
+
+        if (topStrategies.length > 1) {
+            needsClarification = true;
+            updateStep(3);
+            goToScreen(3);
+        } else {
+            selectedStrategy = topStrategies[0];
+            displayValidation();
+            updateStep(4);
+            goToScreen(4);
+        }
+    }
+
+    function processClarification() {
+        const answer = document.getElementById('clarification').value.trim();
+        if (!answer) {
+            alert('Please answer the clarification question.');
+            return;
+        }
+
+        if (answer.toLowerCase().includes('coordinate') || answer.toLowerCase().includes('collaboration') || answer.toLowerCase().includes('team')) {
+            selectedStrategy = 'T4';
+        } else if (answer.toLowerCase().includes('monitor') || answer.toLowerCase().includes('visibility')) {
+            selectedStrategy = 'T2';
+        } else if (answer.toLowerCase().includes('automate')) {
+            selectedStrategy = 'T3';
+        } else if (answer.toLowerCase().includes('formalize') || answer.toLowerCase().includes('plan')) {
+            selectedStrategy = 'T1';
+        } else {
+            selectedStrategy = 'T4';
+        }
+
+        displayValidation();
+        updateStep(4);
+        goToScreen(4);
+    }
+
+    function displayValidation() {
+        const strategy = STRATEGIES[selectedStrategy];
+        const container = document.getElementById('recommendation-box');
+        
+        container.innerHTML = `
+            <div class="rec-box">
+		<h3>${selectedStrategy} — ${strategy.name}</h3>
+                <p style="margin-top:12px;font-size:0.85rem;color:var(--text-3);">This strategy was selected based on the contextual characteristics identified in your scenario.</p>
+            </div>
+        `;
+    }
+
+    function handleStrategyAgreement() {
+        const agree = document.querySelector('input[name="strategy-agreement"]:checked').value;
+        const feedbackDiv = document.getElementById('additional-feedback');
+        const proceedBtn = document.getElementById('proceed-btn');
+        
+        if (agree === 'no') {
+            feedbackDiv.style.display = 'block';
+            proceedBtn.disabled = true;
+        } else {
+            feedbackDiv.style.display = 'none';
+            proceedBtn.disabled = false;
+        }
+    }
+
+    function proceedToPlaybook() {
+        const agree = document.querySelector('input[name="strategy-agreement"]:checked').value;
+        
+        if (agree === 'no') {
+            const feedback = document.getElementById('feedback').value.trim();
+            if (!feedback) {
+                alert('Please provide feedback before proceeding.');
+                return;
+            }
+            // Recalculate based on feedback
+            runTerminal([
+                'processing additional feedback...',
+                'recalculating contextual characteristics...',
+                'updating strategy recommendation...'
+            ], () => {
+                generatePlaybook();
+            });
+        } else {
+            generatePlaybook();
+        }
+    }
+
+    function generatePlaybook() {
+        runTerminal([
+            'generating contextualized playbook...',
+            'adapting recommendations to your scenario...',
+            'finalizing incident management guidance...'
+        ], () => {
+            displayPlaybook();
+            updateStep(5);
+            goToScreen(5);
+        });
+    }
+
+    function displayPlaybook() {
+        const strategy = STRATEGIES[selectedStrategy];
+        const q1 = userResponses.q1 || '(Not provided)';
+        const q2 = userResponses.q2 || '(Not provided)';
+        const q3 = userResponses.q3 || '(Not provided)';
+
+        let html = `
+            <h3 style="font-size:1rem;font-weight:700;margin-bottom:12px;margin-top:16px;">Recommended Strategy</h3>
+            <p><strong>${selectedStrategy} — ${strategy.name}</strong></p>
+            
+            <h3 style="font-size:1rem;font-weight:700;margin-bottom:12px;margin-top:24px;">Confirmed Contextual Characteristics</h3>
+            <table class="ctx-table">
+                <thead><tr><th>CTX ID</th><th>Characteristic</th></tr></thead>
+                <tbody>
+        `;
+
+        identifiedCTX.forEach(ctx => {
+            const def = CTX_DEFINITIONS[ctx.id];
+            html += `<tr><td><span class="ctx-id">${ctx.id}</span></td><td>${def.name}</td></tr>`;
+        });
+
+        html += `
+                </tbody>
+            </table>
+
+            <h3 style="font-size:1rem;font-weight:700;margin-bottom:12px;margin-top:24px;">Your Scenario Summary</h3>
+            <div style="background:var(--surface-2);border-left:3px solid var(--primary);padding:12px;border-radius:var(--r);margin-bottom:16px;">
+                <p style="font-size:0.9rem;color:var(--text-2);margin-bottom:8px;"><strong>Technical Dimension: Incident, Service, and Operational Impact</strong></p>
+                <p style="font-size:0.85rem;color:var(--text-3);margin-bottom:16px;">${q1}</p>
+                
+                <p style="font-size:0.9rem;color:var(--text-2);margin-bottom:8px;"><strong>Business Dimension: Governance, Ecosystem Actors, and Responsibilities</strong></p>
+                <p style="font-size:0.85rem;color:var(--text-3);margin-bottom:16px;">${q2}</p>
+                
+                <p style="font-size:0.9rem;color:var(--text-2);margin-bottom:8px;"><strong>Social Dimension: Team, Leadership, and Response Conditions</strong></p>
+                <p style="font-size:0.85rem;color:var(--text-3);">${q3}</p>
+            </div>
+
+            <h3 style="font-size:1rem;font-weight:700;margin-bottom:12px;margin-top:24px;">SRE Practice: ${strategy.srePractice.name}</h3>
+            <div class="sre-practice-card">
+        `;
+
+        strategy.srePractice.steps.forEach((step, idx) => {
+            html += `
+                <div class="implementation-step">
+                    <h5>Step ${idx + 1}: ${step.title}</h5>
+                    <p>${step.description}</p>
+                    <div class="acceptance-criterion">
+                        <strong>Acceptance Criterion:</strong> ${step.criterion}
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+            </div>
+
+            <p style="font-size:0.8rem;color:var(--text-4);margin-top:24px;font-style:italic;">This playbook was generated based on your scenario analysis and the identified contextual characteristics. Please adapt the recommendations to your specific organizational context and incident response procedures.</p>
+        `;
+
+        document.getElementById('playbook-content').innerHTML = html;
+    }
+
+    function resetForm() {
+        document.getElementById('q1').value = '';
+        document.getElementById('q2').value = '';
+        document.getElementById('q3').value = '';
+        document.getElementById('docs').value = '';
+        document.getElementById('uploaded-files').innerHTML = '';
+        Object.keys(recordingStates).forEach(key => {
+            recordingStates[key] = false;
+            mediaRecorders[key] = null;
+            document.getElementById(`playback-${key}`).innerHTML = '';
+            document.getElementById(`record-${key}`).classList.remove('has-recording');
+            document.getElementById(`record-${key}`).textContent = '🎤 Record';
+            document.getElementById(`clear-${key}`).style.display = 'none';
+        });
+    }
+    </script>
+</body>
+</html>
